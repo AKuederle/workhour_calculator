@@ -40,6 +40,7 @@ export async function fetchHolidaysByYear(year: number, subdivisionCode: string)
     data = await response.json();
   } catch (error) {
     if (error instanceof Error) {
+      console.error('Error fetching holidays:', error);
       throw new Error(`Error fetching holidays: ${error.message}`);
     }
     throw new Error('Unknown error occurred while fetching holidays');

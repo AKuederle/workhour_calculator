@@ -1,5 +1,9 @@
 import { fetchHolidaysByYear } from './holidaysApi';
-import { vi, describe, it, expect, beforeEach } from 'vitest';
+import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
+
+declare const global: {
+  fetch: typeof fetch;
+};
 
 // Mock sample response from the API
 const mockApiResponse = [
@@ -28,6 +32,11 @@ const mockApiResponse = [
 describe('holidaysApi', () => {
   beforeEach(() => {
     // Clear all mocks before each test
+    vi.clearAllMocks();
+    vi.restoreAllMocks();
+  });
+
+  afterEach(() => {
     vi.clearAllMocks();
     vi.restoreAllMocks();
   });
@@ -93,5 +102,94 @@ describe('fetchHolidayIntegrationTest', () => {
     expect(holidays).toBeDefined();
     // Verify we got some holidays
     expect(Object.keys(holidays).length).toBeGreaterThan(0);
+
+    expect(holidays).toEqual({
+      '0': [
+        {
+          name: 'Neujahr',
+          date: new Date('2024-01-01'),
+          isWeekday: true
+        },
+        {
+          name: 'Heilige Drei Könige',
+          date: new Date('2024-01-06'),
+          isWeekday: false
+        }
+      ],
+      '2': [
+        {
+          name: 'Karfreitag',
+          date: new Date('2024-03-29'),
+          isWeekday: true
+        }
+      ],
+      '3': [
+        {
+          name: 'Ostermontag',
+          date: new Date('2024-04-01'),
+          isWeekday: true
+        }
+      ],
+      '4': [
+        {
+          name: 'Tag der Arbeit',
+          date: new Date('2024-05-01'),
+          isWeekday: true
+        },
+        {
+          name: 'Christi Himmelfahrt',
+          date: new Date('2024-05-09'),
+          isWeekday: true
+        },
+        {
+          name: 'Pfingstmontag',
+          date: new Date('2024-05-20'),
+          isWeekday: true
+        },
+        {
+          name: 'Fronleichnam',
+          date: new Date('2024-05-30'),
+          isWeekday: true
+        }
+      ],
+      '7': [
+        {
+          name: 'Friedensfest',
+          date: new Date('2024-08-08'),
+          isWeekday: true
+        },
+        {
+          name: 'Mariä Himmelfahrt',
+          date: new Date('2024-08-15'),
+          isWeekday: true
+        }
+      ],
+      '9': [
+        {
+          name: 'Tag der Deutschen Einheit',
+          date: new Date('2024-10-03'),
+          isWeekday: true
+        }
+      ],
+      '10': [
+        {
+          name: 'Allerheiligen',
+          date: new Date('2024-11-01'),
+          isWeekday: true
+        }
+      ],
+      '11': [
+        {
+          name: '1. Weihnachtsfeiertag',
+          date: new Date('2024-12-25'),
+          isWeekday: true
+        },
+        {
+          name: '2. Weihnachtsfeiertag',
+          date: new Date('2024-12-26'),
+          isWeekday: true
+        }
+      ]
+    });
   }, 10000); // Increase timeout for real API call
 });
