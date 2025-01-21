@@ -3,6 +3,8 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { Check, ChevronsUpDown } from "lucide-react"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
+import VacationDateSelector from "./VacationDateSelector"
+import type { LocationSelectorProps, Subdivision } from "@/types"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -27,7 +29,6 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover"
 import { cn } from "@/lib/utils"
-import type { LocationSelectorProps, Subdivision } from "@/types"
 
 const FormSchema = z.object({
   year: z.string({
@@ -39,9 +40,13 @@ const FormSchema = z.object({
   subdivision: z.string({
     required_error: "Please select a subdivision.",
   }),
+  dateRanges: z.array(z.object({
+    start: z.date(),
+    end: z.date()
+  }))
 })
 
-type FormValues = z.infer<typeof FormSchema>
+export type FormValues = z.infer<typeof FormSchema>
 
 export default function CountrySubdivisionSelector({
   countries,
@@ -50,6 +55,9 @@ export default function CountrySubdivisionSelector({
 }: LocationSelectorProps) {
   const form = useForm<FormValues>({
     resolver: zodResolver(FormSchema),
+    defaultValues: {
+      dateRanges: []
+    }
   })
 
   const [subdivisions, setSubdivisions] = useState<Subdivision[]>([])
@@ -262,6 +270,24 @@ export default function CountrySubdivisionSelector({
                   </PopoverContent>
                 </Popover>
                 {error && <p className="text-sm text-red-500 mt-1">{error}</p>}
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="dateRanges"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Vacation Dates</FormLabel>
+                <FormControl>
+                  <VacationDateSelector 
+                    selectedYear={parseInt(form.watch("year") || new Date().getFullYear().toString())} 
+                    name={field.name}
+                    control={form.control}
+                  />
+                </FormControl>
                 <FormMessage />
               </FormItem>
             )}
