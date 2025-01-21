@@ -37,7 +37,6 @@ export default function VacationDateSelector({ selectedYear }: VacationDateSelec
       const newRanges = parseDateRangeString(inputValue, selectedYear)
       setValue("dateRanges", [...dateRanges, ...newRanges], { shouldValidate: false })
       setInputValue("")
-      await trigger(["dateRanges"])
     } catch {
       setError("dateRanges", { message: "Invalid date format" })
     }
