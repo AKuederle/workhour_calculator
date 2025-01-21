@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react"
+import { useState, useEffect } from "react"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { Check, ChevronsUpDown } from "lucide-react"
 import { useForm } from "react-hook-form"
@@ -56,27 +56,35 @@ export default function CountrySubdivisionSelector({
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  // Fetch subdivisions when country changes
-  const handleCountryChange = useCallback(async (value: string) => {
-    form.setValue("subdivision", "")
-    setError(null)
-    
-    if (!value) {
-      setSubdivisions([])
-      return
+  // Watch form values for re-renders
+  const formValues = form.watch()
+  const selectedCountry = formValues.country
+
+  // Effect to handle country changes
+  useEffect(() => {
+    async function fetchSubdivisions() {
+      if (!selectedCountry) {
+        setSubdivisions([])
+        return
+      }
+
+      form.setValue("subdivision", "")
+      setError(null)
+      setIsLoading(true)
+
+      try {
+        const subdivisionData = await onFetchSubdivisions(selectedCountry)
+        setSubdivisions(subdivisionData)
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Failed to fetch subdivisions")
+        setSubdivisions([])
+      } finally {
+        setIsLoading(false)
+      }
     }
 
-    setIsLoading(true)
-    try {
-      const subdivisionData = await onFetchSubdivisions(value)
-      setSubdivisions(subdivisionData)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to fetch subdivisions")
-      setSubdivisions([])
-    } finally {
-      setIsLoading(false)
-    }
-  }, [form, onFetchSubdivisions])
+    fetchSubdivisions()
+  }, [selectedCountry, form, onFetchSubdivisions])
 
   function onSubmit(data: FormValues) {
     console.log("Form submitted:", data)
@@ -179,7 +187,6 @@ export default function CountrySubdivisionSelector({
                               key={country.name}
                               onSelect={() => {
                                 form.setValue("country", country.code)
-                                handleCountryChange(country.code)
                               }}
                             >
                               {country.name} ({country.code})
@@ -217,7 +224,7 @@ export default function CountrySubdivisionSelector({
                           "w-full justify-between",
                           !field.value && "text-muted-foreground"
                         )}
-                        disabled={!form.getValues("country") || isLoading}
+                        disabled={!formValues.country || isLoading}
                       >
                         {isLoading ? "Loading..." : 
                           field.value
@@ -267,7 +274,7 @@ export default function CountrySubdivisionSelector({
       <div className="mt-4 p-4 bg-gray-100 rounded-md">
         <h2 className="text-lg font-semibold mb-2">Form Values:</h2>
         <pre className="whitespace-pre-wrap">
-          {JSON.stringify(form.getValues(), null, 2)}
+          {JSON.stringify(formValues, null, 2)}
         </pre>
       </div>
     </div>
