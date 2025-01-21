@@ -135,9 +135,9 @@ export default function CountrySubdivisionSelector({
                   {countries.map((country) => (
                     <CommandItem
                       key={country.code}
-                      value={country.code}
-                      onSelect={(currentValue) => {
-                        handleCountryChange(currentValue === selectedCountry ? "" : currentValue)
+                      value={`${country.code} ${country.name}`}
+                      onSelect={() => {
+                        handleCountryChange(country.code === selectedCountry ? "" : country.code)
                         setCountryOpen(false)
                       }}
                     >
@@ -189,9 +189,9 @@ export default function CountrySubdivisionSelector({
                   {subdivisions.map((subdivision) => (
                     <CommandItem
                       key={subdivision.code}
-                      value={subdivision.code}
-                      onSelect={(currentValue) => {
-                        setSelectedSubdivision(currentValue === selectedSubdivision ? "" : currentValue)
+                      value={`${subdivision.code} ${subdivision.name}`}
+                      onSelect={() => {
+                        setSelectedSubdivision(subdivision.code === selectedSubdivision ? "" : subdivision.code)
                         setSubdivisionOpen(false)
                       }}
                     >
