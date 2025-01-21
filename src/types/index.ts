@@ -1,3 +1,5 @@
+import { FormValues } from "@/components/country-subdivision-selector"
+
 export type Holiday = {
   name: string
   date: Date
@@ -22,4 +24,5 @@ export type LocationSelectorProps = {
   countries: Country[]
   years: string[]
   onFetchSubdivisions: (countryCode: string) => Promise<Subdivision[]>
+  onSubmit: (data: FormValues) => void
 } 

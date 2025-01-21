@@ -28,7 +28,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
-import { DateParseError, DateParseErrorCode, formatDateRange, parseDateRangeString } from "@/lib/dateUtils";
+import { DateParseError, formatDateRange, parseDateRangeString } from "@/lib/dateUtils";
 import { Card, CardContent } from "./ui/card";
 import { Input } from "./ui/input";
 
@@ -85,6 +85,7 @@ export default function CountrySubdivisionSelector({
   countries,
   years,
   onFetchSubdivisions,
+  onSubmit,
 }: LocationSelectorProps) {
   const form = useForm<FormValues>({
     resolver: zodResolver(FormSchema),
@@ -102,12 +103,7 @@ export default function CountrySubdivisionSelector({
 
   const vacationDates = form.watch("vacationDates");
   const selectedCountry = form.watch("country");
-
-  // Watch form values for re-renders
-  const formValues = form.watch();
-
-  // console log form errors
-  console.log(form.formState.errors);
+  const selectedYear = form.watch("year");
 
   // Effect to handle country changes
   useEffect(() => {
@@ -173,7 +169,7 @@ export default function CountrySubdivisionSelector({
     }
   };
 
-  function onSubmit(data: FormValues) {
+  function handleSubmit(data: FormValues) {
     // As we don't want to prevent that users update the date after they added vacation dates, we need to clean them here and update all dates
     // that don't match the selected year
     const vacationDates = data.vacationDates || [];
@@ -184,8 +180,7 @@ export default function CountrySubdivisionSelector({
       end: new Date(year, date.end.getMonth(), date.end.getDate()),
     }));
     data = { ...data, vacationDates: updatedVacationDates };
-    console.log("Form submitted:", data);
-    // Handle form submission here
+    onSubmit(data);
   }
 
   return (
@@ -193,7 +188,7 @@ export default function CountrySubdivisionSelector({
       <h1 className="text-2xl font-bold mb-4">Location and Year Selector</h1>
 
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
           <FormField
             control={form.control}
             name="country"
@@ -258,7 +253,7 @@ export default function CountrySubdivisionSelector({
           <FormField
             control={form.control}
             name="subdivision"
-            disabled={!formValues.country || isLoading}
+            disabled={!selectedCountry || isLoading}
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Subdivision</FormLabel>
@@ -272,7 +267,7 @@ export default function CountrySubdivisionSelector({
                           "w-full justify-between",
                           !field.value && "text-muted-foreground"
                         )}
-                        disabled={!formValues.country || isLoading}
+                        disabled={!selectedCountry || isLoading}
                       >
                         {isLoading
                           ? "Loading..."
@@ -356,14 +351,14 @@ export default function CountrySubdivisionSelector({
                               key={year}
                               value={year}
                               onSelect={() => {
-                                form.setValue("year", year);
+                                form.setValue("year", parseInt(year));
                               }}
                             >
                               {year}
                               <Check
                                 className={cn(
                                   "ml-auto",
-                                  year === field.value
+                                  parseInt(year) === field.value
                                     ? "opacity-100"
                                     : "opacity-0"
                                 )}
@@ -383,7 +378,7 @@ export default function CountrySubdivisionSelector({
           <FormField
             control={form.control}
             name="rawVacationDates"
-            disabled={!formValues.year}
+            disabled={!selectedYear}
             render={() => (
               <FormItem>
                 <FormLabel>Vacation Dates</FormLabel>
@@ -396,12 +391,12 @@ export default function CountrySubdivisionSelector({
                       onChange={(e) =>
                         setRawVacationDatesInputValue(e.target.value)
                       }
-                      disabled={!formValues.year}
+                      disabled={!selectedYear}
                     />
                     <Button
                       type="button"
                       onClick={handleAddVacationDate}
-                      disabled={!formValues.year}
+                      disabled={!selectedYear}
                     >
                       Add
                     </Button>
@@ -434,13 +429,6 @@ export default function CountrySubdivisionSelector({
           <Button type="submit">Submit</Button>
         </form>
       </Form>
-
-      <div className="mt-4 p-4 bg-gray-100 rounded-md">
-        <h2 className="text-lg font-semibold mb-2">Form Values:</h2>
-        <pre className="whitespace-pre-wrap">
-          {JSON.stringify(formValues, null, 2)}
-        </pre>
-      </div>
     </div>
   );
 }

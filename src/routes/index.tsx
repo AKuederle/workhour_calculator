@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { fetchCountries, fetchSubdivisions } from '@/lib/holidaysApi'
-import CountrySubdivisionSelector from '@/components/country-subdivision-selector'
+import CountrySubdivisionSelector, { FormValues } from '@/components/country-subdivision-selector'
 
 export const Route = createFileRoute('/')({
   component: MainApp,
@@ -18,11 +18,27 @@ export const Route = createFileRoute('/')({
 // The last 10 years
 const years = Array.from({ length: 10 }, (_, i) => (new Date().getFullYear() - i).toString())
 
+
+
 function MainApp() {
     const { countries, locale } = Route.useLoaderData()
+    const navigate = Route.useNavigate()
+
+    function handleSubmit(data: FormValues) {
+      // Navigate to the results route with the form data
+      navigate({
+        to: '/results',
+        search: {
+          country: data.country,
+          subdivision: data.subdivision,
+          year: data.year,
+          vacationDates: data.vacationDates
+        }
+      });
+    }
   return (
     <div className="p-2">
-      <CountrySubdivisionSelector countries={countries} years={years} onFetchSubdivisions={(countryCode) => fetchSubdivisions(countryCode, locale)} />
+      <CountrySubdivisionSelector countries={countries} years={years} onFetchSubdivisions={(countryCode) => fetchSubdivisions(countryCode, locale)} onSubmit={handleSubmit}/>
     </div>
   )
 }
