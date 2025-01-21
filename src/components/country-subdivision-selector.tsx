@@ -28,43 +28,55 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
-import { formatDateRange, parseDateRangeString } from "@/lib/dateUtils";
+import { DateParseError, DateParseErrorCode, formatDateRange, parseDateRangeString } from "@/lib/dateUtils";
 import { Card, CardContent } from "./ui/card";
 import { Input } from "./ui/input";
 
+const dateRangeSchema = z.object({
+  start: z.date(),
+  end: z.date(),
+});
+
+type DateRange = z.infer<typeof dateRangeSchema>;
+
+const transformVacationDates = (data: {
+  year: number;
+  rawVacationDates?: string;
+  vacationDates?: DateRange[];
+}) => {
+  const vacationDates = data.vacationDates || [];
+  if (!data.rawVacationDates) {
+    return {
+      vacationDates: [...vacationDates],
+    };
+  }
+  return {
+    vacationDates: [
+      ...vacationDates,
+      ...parseDateRangeString(data.rawVacationDates, data.year),
+    ],
+  };
+};
+
 export const FormSchema = z
   .object({
-    year: z.string({
-      required_error: "Please select a year.",
-    }),
     country: z.string({
       required_error: "Please select a country.",
     }),
     subdivision: z.string({
       required_error: "Please select a subdivision.",
     }),
+    year: z.number({
+      required_error: "Please select a year.",
+    }),
     rawVacationDates: z.string().optional(),
-    vacationDates: z
-      .array(
-        z.object({
-          start: z.date(),
-          end: z.date(),
-        })
-      )
-      .optional(),
+    vacationDates: z.array(dateRangeSchema).optional(),
   })
   .transform((data) => {
-    if (data.rawVacationDates) {
-      const vacationDates = data.vacationDates || [];
-      return {
-        ...data,
-        vacationDates: [
-          ...vacationDates,
-          ...parseDateRangeString(data.rawVacationDates, parseInt(data.year)),
-        ],
-      };
+    if (!data.rawVacationDates) {
+      return data;
     }
-    return data;
+    return { ...data, ...transformVacationDates(data) };
   });
 
 export type FormValues = z.infer<typeof FormSchema>;
@@ -78,14 +90,16 @@ export default function CountrySubdivisionSelector({
     resolver: zodResolver(FormSchema),
     defaultValues: {
       vacationDates: [],
+      country: "DE",
+      year: new Date().getFullYear(),
     },
   });
 
   const [subdivisions, setSubdivisions] = useState<Subdivision[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [rawVacationDatesInputValue, setRawVacationDatesInputValue] = useState<string>("");
-  
-  const rawVacationDates = form.watch("rawVacationDates");
+  const [rawVacationDatesInputValue, setRawVacationDatesInputValue] =
+    useState<string>("");
+
   const vacationDates = form.watch("vacationDates");
   const selectedCountry = form.watch("country");
 
@@ -110,6 +124,10 @@ export default function CountrySubdivisionSelector({
       try {
         const subdivisionData = await onFetchSubdivisions(selectedCountry);
         setSubdivisions(subdivisionData);
+        // We set an oppinionated default, if the country is Germany, we set the subdivision to "DE-BE"
+        if (selectedCountry === "DE") {
+          form.setValue("subdivision", "DE-BY");
+        }
       } catch (err) {
         form.setError("subdivision", {
           message:
@@ -124,28 +142,48 @@ export default function CountrySubdivisionSelector({
     fetchSubdivisions();
   }, [selectedCountry, form, onFetchSubdivisions]);
 
-  // We trigger revalidation to update vacationDates
-  useEffect(() => {
-    form.trigger("vacationDates");
-  }, [form, rawVacationDates]);
-
   const handleRemoveVacationDate = async (index: number) => {
     if (!vacationDates) return;
     form.setValue(
       "vacationDates",
-      vacationDates.filter((_, i: number) => i !== index),
+      vacationDates.filter((_: DateRange, i: number) => i !== index),
       { shouldValidate: false }
     );
     await form.trigger("vacationDates");
   };
 
   const handleAddVacationDate = () => {
-    if (!rawVacationDatesInputValue) return;
-    form.setValue("rawVacationDates", rawVacationDatesInputValue);
-    setRawVacationDatesInputValue("");
+    if (!rawVacationDatesInputValue || !form.getValues("year")) return;
+
+    try {
+      const result = transformVacationDates({
+        year: form.getValues("year"),
+        rawVacationDates: rawVacationDatesInputValue,
+        vacationDates: form.getValues("vacationDates"),
+      });
+
+      form.setValue("vacationDates", result.vacationDates);
+      setRawVacationDatesInputValue("");
+      form.clearErrors("rawVacationDates");
+    } catch (error) {
+      console.log(error);
+      form.setError("rawVacationDates", {
+        message: error instanceof DateParseError ? `${error.fieldValue}: ${error.detail}` : "Invalid date format",
+      });
+    }
   };
 
   function onSubmit(data: FormValues) {
+    // As we don't want to prevent that users update the date after they added vacation dates, we need to clean them here and update all dates
+    // that don't match the selected year
+    const vacationDates = data.vacationDates || [];
+    const year = data.year;
+    const updatedVacationDates = vacationDates.map((date) => ({
+      ...date,
+      start: new Date(year, date.start.getMonth(), date.start.getDate()),
+      end: new Date(year, date.end.getMonth(), date.end.getDate()),
+    }));
+    data = { ...data, vacationDates: updatedVacationDates };
     console.log("Form submitted:", data);
     // Handle form submission here
   }
@@ -156,66 +194,6 @@ export default function CountrySubdivisionSelector({
 
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-          <FormField
-            control={form.control}
-            name="year"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Year</FormLabel>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <FormControl>
-                      <Button
-                        variant="outline"
-                        role="combobox"
-                        className={cn(
-                          "w-full justify-between",
-                          !field.value && "text-muted-foreground"
-                        )}
-                      >
-                        {field.value || "Select a year..."}
-                        <ChevronsUpDown className="opacity-50" />
-                      </Button>
-                    </FormControl>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-full p-0">
-                    <Command>
-                      <CommandInput
-                        placeholder="Search year..."
-                        className="h-9"
-                      />
-                      <CommandList>
-                        <CommandEmpty>No year found.</CommandEmpty>
-                        <CommandGroup>
-                          {years.map((year) => (
-                            <CommandItem
-                              key={year}
-                              value={year}
-                              onSelect={() => {
-                                form.setValue("year", year);
-                              }}
-                            >
-                              {year}
-                              <Check
-                                className={cn(
-                                  "ml-auto",
-                                  year === field.value
-                                    ? "opacity-100"
-                                    : "opacity-0"
-                                )}
-                              />
-                            </CommandItem>
-                          ))}
-                        </CommandGroup>
-                      </CommandList>
-                    </Command>
-                  </PopoverContent>
-                </Popover>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
           <FormField
             control={form.control}
             name="country"
@@ -280,6 +258,7 @@ export default function CountrySubdivisionSelector({
           <FormField
             control={form.control}
             name="subdivision"
+            disabled={!formValues.country || isLoading}
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Subdivision</FormLabel>
@@ -343,20 +322,89 @@ export default function CountrySubdivisionSelector({
 
           <FormField
             control={form.control}
+            name="year"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Year</FormLabel>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <FormControl>
+                      <Button
+                        variant="outline"
+                        role="combobox"
+                        className={cn(
+                          "w-full justify-between",
+                          !field.value && "text-muted-foreground"
+                        )}
+                      >
+                        {field.value || "Select a year..."}
+                        <ChevronsUpDown className="opacity-50" />
+                      </Button>
+                    </FormControl>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-full p-0">
+                    <Command>
+                      <CommandInput
+                        placeholder="Search year..."
+                        className="h-9"
+                      />
+                      <CommandList>
+                        <CommandEmpty>No year found.</CommandEmpty>
+                        <CommandGroup>
+                          {years.map((year) => (
+                            <CommandItem
+                              key={year}
+                              value={year}
+                              onSelect={() => {
+                                form.setValue("year", year);
+                              }}
+                            >
+                              {year}
+                              <Check
+                                className={cn(
+                                  "ml-auto",
+                                  year === field.value
+                                    ? "opacity-100"
+                                    : "opacity-0"
+                                )}
+                              />
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
             name="rawVacationDates"
+            disabled={!formValues.year}
             render={() => (
               <FormItem>
                 <FormLabel>Vacation Dates</FormLabel>
                 <FormControl>
-                <div className="flex space-x-2">
-
-                  <Input
-                    placeholder="Enter dates (e.g., 23.04;24.04-27.04;23.06)"
-                    aria-label="Enter vacation dates"
-                    value={rawVacationDatesInputValue}
-                    onChange={(e) => setRawVacationDatesInputValue(e.target.value)}
-                  />
-                    <Button type="button" onClick={handleAddVacationDate}>Add</Button>
+                  <div className="flex space-x-2">
+                    <Input
+                      placeholder="Enter dates (e.g., 23.04;24.04-27.04;23.06)"
+                      aria-label="Enter vacation dates"
+                      value={rawVacationDatesInputValue}
+                      onChange={(e) =>
+                        setRawVacationDatesInputValue(e.target.value)
+                      }
+                      disabled={!formValues.year}
+                    />
+                    <Button
+                      type="button"
+                      onClick={handleAddVacationDate}
+                      disabled={!formValues.year}
+                    >
+                      Add
+                    </Button>
                   </div>
                 </FormControl>
                 <FormMessage />
