@@ -30,7 +30,7 @@ import {
 } from "@/components/ui/popover"
 import { cn } from "@/lib/utils"
 
-const FormSchema = z.object({
+export const FormSchema = z.object({
   year: z.string({
     required_error: "Please select a year.",
   }),
@@ -62,11 +62,13 @@ export default function CountrySubdivisionSelector({
 
   const [subdivisions, setSubdivisions] = useState<Subdivision[]>([])
   const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
 
   // Watch form values for re-renders
   const formValues = form.watch()
   const selectedCountry = formValues.country
+
+  // console log form errors
+  console.log(form.formState.errors)
 
   // Effect to handle country changes
   useEffect(() => {
@@ -77,14 +79,14 @@ export default function CountrySubdivisionSelector({
       }
 
       form.setValue("subdivision", "")
-      setError(null)
+      form.clearErrors("subdivision")
       setIsLoading(true)
 
       try {
         const subdivisionData = await onFetchSubdivisions(selectedCountry)
         setSubdivisions(subdivisionData)
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to fetch subdivisions")
+        form.setError("subdivision", { message: err instanceof Error ? err.message : "Failed to fetch subdivisions" })
         setSubdivisions([])
       } finally {
         setIsLoading(false)
@@ -269,7 +271,6 @@ export default function CountrySubdivisionSelector({
                     </Command>
                   </PopoverContent>
                 </Popover>
-                {error && <p className="text-sm text-red-500 mt-1">{error}</p>}
                 <FormMessage />
               </FormItem>
             )}
@@ -278,17 +279,15 @@ export default function CountrySubdivisionSelector({
           <FormField
             control={form.control}
             name="dateRanges"
-            render={({ field }) => (
+            render={() => (
               <FormItem>
                 <FormLabel>Vacation Dates</FormLabel>
+                <FormMessage />
                 <FormControl>
                   <VacationDateSelector 
                     selectedYear={parseInt(form.watch("year") || new Date().getFullYear().toString())} 
-                    name={field.name}
-                    control={form.control}
                   />
                 </FormControl>
-                <FormMessage />
               </FormItem>
             )}
           />
