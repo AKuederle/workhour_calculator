@@ -22,9 +22,31 @@ export const Route = createFileRoute('/results')({
   component: RouteComponent,
   validateSearch: zodValidator(BaseFormSchema),
   loaderDeps: ({ search }) => (search),
-  loader: async ({deps: { subdivision, year, vacationDates }}) => {
+  loader: async ({deps: { subdivision, year, vacationDates, offOnChristmasEve, offOnNewYearsEve, protestantCommunity }}) => {
     // Fetch holidays
-    const holidays = await fetchHolidaysByYear(year, subdivision)
+    let holidays = await fetchHolidaysByYear(year, subdivision)
+
+    if (subdivision === 'DE-BY' && protestantCommunity === true) {
+      // In this case we have to remove "Mariä Himmelfahrt"
+      console.log('Removing Mariä Himmelfahrt, as we found a protestant community in baveria. n-holidays before: ', holidays.length)
+      holidays = holidays.filter(holiday => holiday.name !== 'Mariä Himmelfahrt')
+      console.log('n-holidays after: ', holidays.length)
+    }
+
+    // If we are off on Christmas Eve and/or New Years Eve, we add them to the holidays
+    if (offOnChristmasEve) {
+      holidays.push({
+        name: 'Christmas Eve',
+        date: new Date(year, 11, 24)
+      })
+    }
+    if (offOnNewYearsEve) {
+      holidays.push({
+        name: 'New Years Eve',
+        date: new Date(year, 11, 31)
+      })
+    }
+
 
     if (!vacationDates) {
       return {

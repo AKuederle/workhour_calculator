@@ -32,7 +32,10 @@ function MainApp() {
           country: data.country,
           subdivision: data.subdivision,
           year: data.year,
-          vacationDates: data.vacationDates
+          vacationDates: data.vacationDates,
+          offOnChristmasEve: data.offOnChristmasEve,
+          offOnNewYearsEve: data.offOnNewYearsEve,
+          protestantCommunity: data.protestantCommunity
         }
       });
     }

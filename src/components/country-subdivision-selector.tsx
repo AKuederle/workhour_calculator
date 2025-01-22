@@ -17,6 +17,7 @@ import {
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -31,6 +32,7 @@ import { cn } from "@/lib/utils";
 import { DateParseError, formatDateRange, parseDateRangeString } from "@/lib/dateUtils";
 import { Card, CardContent } from "./ui/card";
 import { Input } from "./ui/input";
+import { Checkbox } from "./ui/checkbox";
 
 const dateRangeSchema = z.object({
   start: z.date(),
@@ -69,6 +71,9 @@ export const BaseFormSchema = z
   year: z.number({
     required_error: "Please select a year.",
   }),
+  offOnChristmasEve: z.boolean().optional(),
+  offOnNewYearsEve: z.boolean().optional(),
+  protestantCommunity: z.boolean().optional(),
   vacationDates: z.array(dateRangeSchema).optional(),
 })
 
@@ -97,6 +102,9 @@ export default function CountrySubdivisionSelector({
       vacationDates: [],
       country: "DE",
       year: new Date().getFullYear(),
+      offOnChristmasEve: true,
+      offOnNewYearsEve: true,
+      protestantCommunity: true,
     },
   });
 
@@ -375,6 +383,61 @@ export default function CountrySubdivisionSelector({
                   </PopoverContent>
                 </Popover>
                 <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="offOnChristmasEve"
+            render={({ field }) => (
+              <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4 shadow-sm">
+                <FormControl>
+                  <Checkbox checked={field.value} onCheckedChange={field.onChange} />
+                </FormControl>
+                <div className="space-y-1 leading-none">
+                  <FormLabel>Off on Christmas Eve</FormLabel>
+                  <FormDescription>
+                    If you are off on Christmas Eve (aka full day off without the need to take vacation days), check this box.
+                  </FormDescription>
+                </div>
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="offOnNewYearsEve"
+            render={({ field }) => (
+              <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4 shadow-sm">
+                <FormControl>
+                  <Checkbox checked={field.value} onCheckedChange={field.onChange} />
+                </FormControl>
+                <div className="space-y-1 leading-none">
+                  <FormLabel>Off on New Years Eve</FormLabel>
+                  <FormDescription>
+                    If you are off on New Years Eve (aka full day off without the need to take vacation days), check this box.
+                  </FormDescription>
+                </div>
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="protestantCommunity"
+            render={({ field }) => (
+              <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4 shadow-sm">
+                <FormControl>
+                  <Checkbox checked={field.value} onCheckedChange={field.onChange} />
+                </FormControl>
+                <div className="space-y-1 leading-none">
+                  <FormLabel>Protestant Community</FormLabel>
+                  <FormDescription>
+                    If you are part of the protestant community, some holidays might not apply for you, even if you live in a country/state that celebrates them.
+                    The only edge case that we are currently implementing is "Mariä Himmelfahrt" (Ascension of Mary) in Bavaria/Germany.
+                  </FormDescription>
+                </div>
               </FormItem>
             )}
           />
