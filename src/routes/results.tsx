@@ -1,11 +1,10 @@
-import { createFileRoute, useSearch } from '@tanstack/react-router'
+import { createFileRoute } from '@tanstack/react-router'
 import { fetchHolidaysByYear } from '@/lib/holidaysApi'
-import { parseDateOrRangeString } from '@/lib/dateUtils'
-import { useEffect, useState } from 'react'
-import { differenceInDays, eachDayOfInterval, eachMonthOfInterval, endOfMonth, endOfYear, format, getDaysInMonth, isWeekend, startOfMonth, startOfYear } from 'date-fns'
+import { differenceInDays, endOfYear, format, getDaysInMonth, isWeekend, startOfYear } from 'date-fns'
 import { zodValidator } from '@tanstack/zod-adapter'
 import { BaseFormSchema } from '@/components/country-subdivision-selector'
 import { cn } from '@/lib/utils'
+import { useState } from 'react'
 
 enum WorkDayType {
   WORKDAY = 'WORKDAY',
@@ -109,7 +108,7 @@ export const Route = createFileRoute('/results')({
           if (currentVacationStart === -1) {
             currentVacationStart = i
           }
-        } else if (currentVacationStart !== -1) {
+        } else if (month.monthDays[i] === WorkDayType.WORKDAY && currentVacationStart !== -1) {
           // We don't add 1 to the end as the vaction ranges are provided inclusive start and end
           vacationRanges.push({ start: `${currentVacationStart + 1}.${monthIndex + 1}`, end: `${i}.${monthIndex + 1}` })
           currentVacationStart = -1
@@ -126,28 +125,77 @@ export const Route = createFileRoute('/results')({
       }
     })
 
-    const summary = {
-      totalWorkDays: workdaysPerMonth.reduce((acc, month) => acc + month.workDays, 0),
-      totalVacationDays: workdaysPerMonth.reduce((acc, month) => acc + month.vacationDays, 0),
-    }
-
-    return {days, workdaysPerMonth, summary}
+    return {days, workdaysPerMonth}
   },
 })
 
 
 function RouteComponent() {
-  const {days, workdaysPerMonth, summary} = Route.useLoaderData()
+  const {days, workdaysPerMonth} = Route.useLoaderData()
+  const [hoursPerDay, setHoursPerDay] = useState(8)
 
   if (!days) {
     return <div>No data</div>
   }
 
+  const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
+  
   return (
-    <div>
-      <h1>Results</h1>
-      {JSON.stringify(workdaysPerMonth)}
-      {JSON.stringify(summary)}
+    <div className="p-4">
+      <h1 className="text-2xl font-bold mb-6">Work Days Summary</h1>
+      <div className="bg-gray-100 p-4 rounded space-y-4">
+        <div className="flex items-center space-x-2">
+          <label htmlFor="hoursPerDay" className="font-medium">Hours per day:</label>
+          <input
+            id="hoursPerDay"
+            type="number"
+            min="0"
+            max="24"
+            step="0.5"
+            value={hoursPerDay}
+            onChange={(e) => setHoursPerDay(Number(e.target.value))}
+            className="border rounded p-1 w-20"
+          />
+        </div>
+        <table className="w-full bg-white border-collapse border">
+          <thead>
+            <tr className="bg-gray-50">
+              <th className="border p-2 text-left">Month</th>
+              <th className="border p-2 text-right">Workdays</th>
+              <th className="border p-2 text-right">Work Hours</th>
+              <th className="border p-2 text-left">Vacation Ranges</th>
+            </tr>
+          </thead>
+          <tbody>
+            {workdaysPerMonth.map((month, index) => {
+              const vacationRangesStr = month.vacationRanges.length > 0 
+                ? month.vacationRanges.map(range => `${range.start}-${range.end}`).join(';')
+                : '-'
+              const workHours = month.workDays * hoursPerDay
+              return (
+                <tr key={index} className="hover:bg-gray-50">
+                  <td className="border p-2">{months[index]}</td>
+                  <td className="border p-2 text-right">{month.workDays}</td>
+                  <td className="border p-2 text-right">{workHours}</td>
+                  <td className="border p-2 font-mono">{vacationRangesStr}</td>
+                </tr>
+              )
+            })}
+            <tr className="bg-gray-50 font-semibold">
+              <td className="border p-2">Total</td>
+              <td className="border p-2 text-right">
+                {workdaysPerMonth.reduce((sum, month) => sum + month.workDays, 0)}
+              </td>
+              <td className="border p-2 text-right">
+                {workdaysPerMonth.reduce((sum, month) => sum + month.workDays * hoursPerDay, 0)}
+              </td>
+              <td className="border p-2"></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h2 className="text-xl font-bold mt-8 mb-4">Visual Calendar</h2>
       <div className="grid gap-4">
         {Array.from({ length: 12 }, (_, monthIndex) => {
           const monthStart = new Date(new Date().getFullYear(), monthIndex, 1);
