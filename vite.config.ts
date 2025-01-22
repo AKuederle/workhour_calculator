@@ -4,6 +4,7 @@ import { TanStackRouterVite } from '@tanstack/router-plugin/vite'
 import { defineConfig } from "vite"
 
 export default defineConfig({
+  base: process.env.NODE_ENV === "production" ? "/workhour_calculator/" : "/",
   plugins: [    
     TanStackRouterVite(),
     react()
