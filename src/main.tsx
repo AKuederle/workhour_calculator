@@ -9,7 +9,12 @@ import "./index.css"
 import { routeTree } from './routeTree.gen'
 
 // Create a new router instance
-const router = createRouter({ routeTree, parseSearch: parseSearchWith(SuperJSON.parse), stringifySearch: stringifySearchWith(SuperJSON.stringify) })
+const router = createRouter({ 
+  routeTree, 
+  parseSearch: parseSearchWith(SuperJSON.parse), 
+  stringifySearch: stringifySearchWith(SuperJSON.stringify),
+  basepath: import.meta.env.BASE_URL.replace(/\/$/, '') // Remove trailing slash if present
+})
 
 // Register the router instance for type safety
 declare module '@tanstack/react-router' {

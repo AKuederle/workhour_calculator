@@ -1,4 +1,4 @@
-import type { MonthlyHolidays, Subdivision, Country } from "@/types"
+import type { Subdivision, Country } from "@/types"
 
 interface SubdivisionApiResponse {
   code: string

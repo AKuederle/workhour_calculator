@@ -66,7 +66,7 @@ describe('holidaysApi', () => {
     expect(holidays[2]).toBeDefined(); // March (month 2)
 
     // Check holiday structure
-    const newYearsDay = holidays[0][0];
+    const newYearsDay = holidays[0];
     expect(newYearsDay).toEqual({
       name: "New Year's Day",
       date: new Date('2024-01-01'),
