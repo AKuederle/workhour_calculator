@@ -209,24 +209,55 @@ function RouteComponent() {
           return (
             <div key={monthIndex} className="flex flex-col gap-2">
               <h2 className="font-semibold">{monthName}</h2>
-              <div className="flex gap-1">
-                {monthDays.map((day, dayIndex) => (
-                  <div
-                    key={dayIndex}
-                    className={cn(
-                      "w-6 h-6 rounded-sm",
-                      day === WorkDayType.WORKDAY && "bg-green-500",
-                      day === WorkDayType.VACATION && "bg-blue-500",
-                      day === WorkDayType.HOLIDAY && "bg-red-500",
-                      day === WorkDayType.WEEKEND && "bg-gray-500"
-                    )}
-                    title={`${monthName} ${dayIndex + 1}: ${WorkDayType[day]}`}
-                  />
-                ))}
+              <div className="flex flex-col gap-1">
+                <div className="flex gap-1 h-4">
+                  {Array.from({ length: daysInMonth }, (_, i) => (
+                    <div key={i} className="w-6 text-xs text-center">
+                      {i + 1}
+                    </div>
+                  ))}
+                </div>
+                <div className="flex gap-1">
+                  {monthDays.map((day, dayIndex) => (
+                    <div
+                      key={dayIndex}
+                      className={cn(
+                        "w-6 h-6 rounded-sm",
+                        day === WorkDayType.WORKDAY && "bg-green-500",
+                        day === WorkDayType.VACATION && "bg-blue-500",
+                        day === WorkDayType.HOLIDAY && "bg-red-500",
+                        day === WorkDayType.WEEKEND && "bg-gray-500"
+                      )}
+                      title={`${monthName} ${dayIndex + 1}: ${WorkDayType[day]}`}
+                    />
+                  ))}
+                </div>
               </div>
             </div>
           );
         })}
+      </div>
+      
+      <div className="mt-6 bg-gray-100 p-4 rounded">
+        <h3 className="font-semibold mb-3">Legend</h3>
+        <div className="flex gap-6">
+          <div className="flex items-center gap-2">
+            <div className="w-6 h-6 rounded-sm bg-green-500" />
+            <span>Work Day</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-6 h-6 rounded-sm bg-blue-500" />
+            <span>Vacation</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-6 h-6 rounded-sm bg-red-500" />
+            <span>Holiday</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-6 h-6 rounded-sm bg-gray-500" />
+            <span>Weekend</span>
+          </div>
+        </div>
       </div>
     </div>
   )
