@@ -58,19 +58,23 @@ const transformVacationDates = (data: {
   };
 };
 
-export const FormSchema = z
-  .object({
-    country: z.string({
-      required_error: "Please select a country.",
-    }),
-    subdivision: z.string({
-      required_error: "Please select a subdivision.",
-    }),
-    year: z.number({
-      required_error: "Please select a year.",
-    }),
+export const BaseFormSchema = z
+.object({
+  country: z.string({
+    required_error: "Please select a country.",
+  }),
+  subdivision: z.string({
+    required_error: "Please select a subdivision.",
+  }),
+  year: z.number({
+    required_error: "Please select a year.",
+  }),
+  vacationDates: z.array(dateRangeSchema).optional(),
+})
+
+export const FormSchema = z.object(
+  {...BaseFormSchema.shape,
     rawVacationDates: z.string().optional(),
-    vacationDates: z.array(dateRangeSchema).optional(),
   })
   .transform((data) => {
     if (!data.rawVacationDates) {

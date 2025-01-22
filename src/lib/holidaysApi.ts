@@ -17,7 +17,7 @@ interface HolidayApiResponse {
   }>
 }
 
-export async function fetchHolidaysByYear(year: number, subdivisionCode: string): Promise<MonthlyHolidays> {
+export async function fetchHolidaysByYear(year: number, subdivisionCode: string): Promise<{ name: string; date: Date; }[]> {
   const baseUrl = 'https://openholidaysapi.org/PublicHolidays'
   const countryCode = subdivisionCode.split('-')[0]
   const url = `${baseUrl}?countryIsoCode=${countryCode}&subdivisionCode=${subdivisionCode}&validFrom=${year}-01-01&validTo=${year}-12-31`
@@ -45,27 +45,15 @@ export async function fetchHolidaysByYear(year: number, subdivisionCode: string)
     }
     throw new Error('Unknown error occurred while fetching holidays')
   }
-    
-  // Transform and group the holidays by month
-  const holidaysByMonth: MonthlyHolidays = {}
   
-  data.forEach((holiday: HolidayApiResponse) => {
+  return data.map((holiday: HolidayApiResponse) => {
     const date = new Date(holiday.startDate)
-    const month = date.getMonth()
-    const isWeekday = date.getDay() !== 0 && date.getDay() !== 6
 
-    if (!holidaysByMonth[month]) {
-      holidaysByMonth[month] = []
-    }
-
-    holidaysByMonth[month].push({
+    return {
       name: holiday.name[0].text, // API returns name in multiple languages, we take the first one
       date,
-      isWeekday
-    })
+    }
   })
-
-  return holidaysByMonth
 }
 
 export async function fetchSubdivisions(countryCode: string, languageIsoCode: string): Promise<Subdivision[]> {
