@@ -160,10 +160,10 @@ function RouteComponent() {
         <table className="w-full bg-white border-collapse border">
           <thead>
             <tr className="bg-gray-50">
-              <th className="border p-2 text-left">Month</th>
-              <th className="border p-2 text-right">Workdays</th>
-              <th className="border p-2 text-right">Work Hours</th>
-              <th className="border p-2 text-left">Vacation Ranges</th>
+              <th className="border p-2 text-left select-all">Month</th>
+              <th className="border p-2 text-right select-all">Workdays</th>
+              <th className="border p-2 text-right select-all">Work Hours</th>
+              <th className="border p-2 text-left select-all">Vacation Ranges</th>
             </tr>
           </thead>
           <tbody>
@@ -174,22 +174,22 @@ function RouteComponent() {
               const workHours = month.workDays * hoursPerDay
               return (
                 <tr key={index} className="hover:bg-gray-50">
-                  <td className="border p-2">{months[index]}</td>
-                  <td className="border p-2 text-right">{month.workDays}</td>
-                  <td className="border p-2 text-right">{workHours}</td>
-                  <td className="border p-2 font-mono">{vacationRangesStr}</td>
+                  <td className="border p-2 select-all">{months[index]}</td>
+                  <td className="border p-2 text-right select-all">{month.workDays}</td>
+                  <td className="border p-2 text-right select-all">{workHours}</td>
+                  <td className="border p-2 font-mono select-all">{vacationRangesStr}</td>
                 </tr>
               )
             })}
             <tr className="bg-gray-50 font-semibold">
-              <td className="border p-2">Total</td>
-              <td className="border p-2 text-right">
+              <td className="border p-2 select-all">Total</td>
+              <td className="border p-2 text-right select-all">
                 {workdaysPerMonth.reduce((sum, month) => sum + month.workDays, 0)}
               </td>
-              <td className="border p-2 text-right">
+              <td className="border p-2 text-right select-all">
                 {workdaysPerMonth.reduce((sum, month) => sum + month.workDays * hoursPerDay, 0)}
               </td>
-              <td className="border p-2"></td>
+              <td className="border p-2 select-all"></td>
             </tr>
           </tbody>
         </table>
