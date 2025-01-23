@@ -147,7 +147,7 @@ export default function CountrySubdivisionSelector({
       try {
         const subdivisionData = await onFetchSubdivisions(selectedCountry);
         setSubdivisions(subdivisionData);
-        // We set an oppinionated default, if the country is Germany, we set the subdivision to "DE-BE"
+        // We set an oppinionated default, if the country is Germany, we set the subdivision to Bavaria
         if (selectedCountry === "DE") {
           form.setValue("subdivision", "DE-BY");
         }
