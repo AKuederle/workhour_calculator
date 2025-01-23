@@ -121,10 +121,20 @@ export const Route = createFileRoute('/results')({
           if (currentVacationStart === -1) {
             currentVacationStart = i
           }
+          // If there was an active sick range, terminate it
+          if (currentSickStart !== -1) {
+            sickRanges.push({ start: `${currentSickStart + 1}.${monthIndex + 1}`, end: `${i}.${monthIndex + 1}` })
+            currentSickStart = -1
+          }
         } else if (month.monthDays[i] === WorkDayType.SICK) {
           nSickDays++
           if (currentSickStart === -1) {
             currentSickStart = i
+          }
+          // If there was an active vacation range, terminate it
+          if (currentVacationStart !== -1) {
+            vacationRanges.push({ start: `${currentVacationStart + 1}.${monthIndex + 1}`, end: `${i}.${monthIndex + 1}` })
+            currentVacationStart = -1
           }
         } else if (month.monthDays[i] === WorkDayType.WORKDAY) {
           if (currentVacationStart !== -1) {
