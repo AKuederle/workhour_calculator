@@ -176,11 +176,11 @@ export default function CountrySubdivisionSelector({
   };
 
   const handleAddVacationDate = () => {
-    if (!rawVacationDatesInputValue || !form.getValues("year")) return;
+    if (!rawVacationDatesInputValue || !selectedYear) return;
 
     try {
       const result = transformVacationDates({
-        year: form.getValues("year"),
+        year: selectedYear,
         rawVacationDates: rawVacationDatesInputValue,
         vacationDates: form.getValues("vacationDates"),
       });
@@ -207,13 +207,13 @@ export default function CountrySubdivisionSelector({
   };
 
   const handleAddSickDate = () => {
-    if (!rawSickDatesInputValue || !form.getValues("year")) return;
+    if (!rawSickDatesInputValue || !selectedYear) return;
 
     try {
       const result = {
         sickDates: [
           ...(form.getValues("sickDates") || []),
-          ...parseDateRangeString(rawSickDatesInputValue, form.getValues("year")),
+          ...parseDateRangeString(rawSickDatesInputValue, selectedYear),
         ],
       };
 
