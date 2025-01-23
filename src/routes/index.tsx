@@ -33,6 +33,7 @@ function MainApp() {
           subdivision: data.subdivision,
           year: data.year,
           vacationDates: data.vacationDates,
+          sickDates: data.sickDates,
           offOnChristmasEve: data.offOnChristmasEve,
           offOnNewYearsEve: data.offOnNewYearsEve,
           protestantCommunity: data.protestantCommunity

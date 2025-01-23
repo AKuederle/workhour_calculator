@@ -11,6 +11,7 @@ enum WorkDayType {
   WEEKEND = 'WEEKEND',
   HOLIDAY = 'HOLIDAY',
   VACATION = 'VACATION',
+  SICK = 'SICK',
 }
 
 const getDayIndex = (date: Date) => {
@@ -21,7 +22,7 @@ export const Route = createFileRoute('/results')({
   component: RouteComponent,
   validateSearch: zodValidator(BaseFormSchema),
   loaderDeps: ({ search }) => (search),
-  loader: async ({deps: { subdivision, year, vacationDates, offOnChristmasEve, offOnNewYearsEve, protestantCommunity }}) => {
+  loader: async ({deps: { subdivision, year, vacationDates, sickDates, offOnChristmasEve, offOnNewYearsEve, protestantCommunity }}) => {
     // Fetch holidays
     let holidays = await fetchHolidaysByYear(year, subdivision)
 
@@ -68,6 +69,15 @@ export const Route = createFileRoute('/results')({
       }
     })
 
+    // Mark all sick days
+    sickDates?.forEach(sickDate => {
+      const startDateDayIndex = getDayIndex(sickDate.start)
+      const endDateDayIndex = getDayIndex(sickDate.end)
+      for (let i = startDateDayIndex; i <= endDateDayIndex; i++) {
+        days[i] = WorkDayType.SICK
+      }
+    })
+
     // Now we mark all holidays as HOLIDAY
     holidays.forEach(holiday => {
       const holidayDayIndex = getDayIndex(holiday.date)
@@ -96,32 +106,52 @@ export const Route = createFileRoute('/results')({
       }
     })
 
-    // Now we calculate the number of workdays per month and the vacation ranges taken.
-    // Vacation ranges are calculated by looking for a VACATION day until we find a WORKDAY.
+    // Now we calculate the number of workdays per month and the vacation/sick ranges taken.
     const workdaysPerMonth = daysPerMonth.map((month, monthIndex) => {
       const vacationRanges = []
+      const sickRanges = []
       let nVacationDays = 0
+      let nSickDays = 0
       let currentVacationStart: number = -1
+      let currentSickStart: number = -1
+
       for (let i = 0; i < month.monthDays.length; i++) {
         if (month.monthDays[i] === WorkDayType.VACATION) {
           nVacationDays++
           if (currentVacationStart === -1) {
             currentVacationStart = i
           }
-        } else if (month.monthDays[i] === WorkDayType.WORKDAY && currentVacationStart !== -1) {
-          // We don't add 1 to the end as the vaction ranges are provided inclusive start and end
-          vacationRanges.push({ start: `${currentVacationStart + 1}.${monthIndex + 1}`, end: `${i}.${monthIndex + 1}` })
-          currentVacationStart = -1
+        } else if (month.monthDays[i] === WorkDayType.SICK) {
+          nSickDays++
+          if (currentSickStart === -1) {
+            currentSickStart = i
+          }
+        } else if (month.monthDays[i] === WorkDayType.WORKDAY) {
+          if (currentVacationStart !== -1) {
+            vacationRanges.push({ start: `${currentVacationStart + 1}.${monthIndex + 1}`, end: `${i}.${monthIndex + 1}` })
+            currentVacationStart = -1
+          }
+          if (currentSickStart !== -1) {
+            sickRanges.push({ start: `${currentSickStart + 1}.${monthIndex + 1}`, end: `${i}.${monthIndex + 1}` })
+            currentSickStart = -1
+          }
         }
       }
+
       if (currentVacationStart !== -1) {
         vacationRanges.push({ start: `${currentVacationStart + 1}.${monthIndex + 1}`, end: `${month.monthDays.length}.${monthIndex + 1}` })
       }
+      if (currentSickStart !== -1) {
+        sickRanges.push({ start: `${currentSickStart + 1}.${monthIndex + 1}`, end: `${month.monthDays.length}.${monthIndex + 1}` })
+      }
+
       return {
         daysInMonth: month.daysInMonth,
         workDays: month.monthDays.filter(day => day === WorkDayType.WORKDAY).length,
         vacationDays: nVacationDays,
-        vacationRanges
+        sickDays: nSickDays,
+        vacationRanges,
+        sickRanges
       }
     })
 
@@ -164,12 +194,16 @@ function RouteComponent() {
               <th className="border p-2 text-right select-all">Workdays</th>
               <th className="border p-2 text-right select-all">Work Hours</th>
               <th className="border p-2 text-left select-all">Vacation Ranges</th>
+              <th className="border p-2 text-left select-all">Sick Ranges</th>
             </tr>
           </thead>
           <tbody>
             {workdaysPerMonth.map((month, index) => {
               const vacationRangesStr = month.vacationRanges.length > 0 
                 ? month.vacationRanges.map(range => `${range.start}-${range.end}`).join(';')
+                : '-'
+              const sickRangesStr = month.sickRanges.length > 0
+                ? month.sickRanges.map(range => `${range.start}-${range.end}`).join(';')
                 : '-'
               const workHours = month.workDays * hoursPerDay
               return (
@@ -178,6 +212,7 @@ function RouteComponent() {
                   <td className="border p-2 text-right select-all">{month.workDays}</td>
                   <td className="border p-2 text-right select-all">{workHours}</td>
                   <td className="border p-2 font-mono select-all">{vacationRangesStr}</td>
+                  <td className="border p-2 font-mono select-all">{sickRangesStr}</td>
                 </tr>
               )
             })}
@@ -189,6 +224,7 @@ function RouteComponent() {
               <td className="border p-2 text-right select-all">
                 {workdaysPerMonth.reduce((sum, month) => sum + month.workDays * hoursPerDay, 0)}
               </td>
+              <td className="border p-2 select-all"></td>
               <td className="border p-2 select-all"></td>
             </tr>
           </tbody>
@@ -225,6 +261,7 @@ function RouteComponent() {
                         "w-6 h-6 rounded-sm",
                         day === WorkDayType.WORKDAY && "bg-green-500",
                         day === WorkDayType.VACATION && "bg-blue-500",
+                        day === WorkDayType.SICK && "bg-yellow-500",
                         day === WorkDayType.HOLIDAY && "bg-red-500",
                         day === WorkDayType.WEEKEND && "bg-gray-500"
                       )}
@@ -248,6 +285,10 @@ function RouteComponent() {
           <div className="flex items-center gap-2">
             <div className="w-6 h-6 rounded-sm bg-blue-500" />
             <span>Vacation</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-6 h-6 rounded-sm bg-yellow-500" />
+            <span>Sick</span>
           </div>
           <div className="flex items-center gap-2">
             <div className="w-6 h-6 rounded-sm bg-red-500" />

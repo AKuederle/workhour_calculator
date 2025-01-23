@@ -75,17 +75,29 @@ export const BaseFormSchema = z
   offOnNewYearsEve: z.boolean().optional(),
   protestantCommunity: z.boolean().optional(),
   vacationDates: z.array(dateRangeSchema).optional(),
+  sickDates: z.array(dateRangeSchema).optional(),
 })
 
 export const FormSchema = z.object(
   {...BaseFormSchema.shape,
     rawVacationDates: z.string().optional(),
+    rawSickDates: z.string().optional(),
   })
   .transform((data) => {
-    if (!data.rawVacationDates) {
-      return data;
+    let result = data;
+    if (data.rawVacationDates) {
+      result = { ...result, ...transformVacationDates(data) };
     }
-    return { ...data, ...transformVacationDates(data) };
+    if (data.rawSickDates) {
+      result = {
+        ...result,
+        sickDates: [
+          ...(data.sickDates || []),
+          ...parseDateRangeString(data.rawSickDates, data.year),
+        ],
+      };
+    }
+    return result;
   });
 
 export type FormValues = z.infer<typeof FormSchema>;
@@ -100,6 +112,7 @@ export default function CountrySubdivisionSelector({
     resolver: zodResolver(FormSchema),
     defaultValues: {
       vacationDates: [],
+      sickDates: [],
       country: "DE",
       year: new Date().getFullYear(),
       offOnChristmasEve: true,
@@ -112,8 +125,10 @@ export default function CountrySubdivisionSelector({
   const [isLoading, setIsLoading] = useState(false);
   const [rawVacationDatesInputValue, setRawVacationDatesInputValue] =
     useState<string>("");
+  const [rawSickDatesInputValue, setRawSickDatesInputValue] = useState<string>("");
 
   const vacationDates = form.watch("vacationDates");
+  const sickDates = form.watch("sickDates");
   const selectedCountry = form.watch("country");
   const selectedYear = form.watch("year");
 
@@ -176,6 +191,38 @@ export default function CountrySubdivisionSelector({
     } catch (error) {
       console.log(error);
       form.setError("rawVacationDates", {
+        message: error instanceof DateParseError ? `${error.fieldValue}: ${error.detail}` : "Invalid date format",
+      });
+    }
+  };
+
+  const handleRemoveSickDate = async (index: number) => {
+    if (!sickDates) return;
+    form.setValue(
+      "sickDates",
+      sickDates.filter((_: DateRange, i: number) => i !== index),
+      { shouldValidate: false }
+    );
+    await form.trigger("sickDates");
+  };
+
+  const handleAddSickDate = () => {
+    if (!rawSickDatesInputValue || !form.getValues("year")) return;
+
+    try {
+      const result = {
+        sickDates: [
+          ...(form.getValues("sickDates") || []),
+          ...parseDateRangeString(rawSickDatesInputValue, form.getValues("year")),
+        ],
+      };
+
+      form.setValue("sickDates", result.sickDates);
+      setRawSickDatesInputValue("");
+      form.clearErrors("rawSickDates");
+    } catch (error) {
+      console.log(error);
+      form.setError("rawSickDates", {
         message: error instanceof DateParseError ? `${error.fieldValue}: ${error.detail}` : "Invalid date format",
       });
     }
@@ -442,55 +489,116 @@ export default function CountrySubdivisionSelector({
             )}
           />
 
-          <FormField
-            control={form.control}
-            name="rawVacationDates"
-            disabled={!selectedYear}
-            render={() => (
-              <FormItem>
-                <FormLabel>Vacation Dates</FormLabel>
-                <FormControl>
-                  <div className="flex space-x-2">
-                    <Input
-                      placeholder="Enter dates (e.g., 23.04;24.04-27.04;23.06)"
-                      aria-label="Enter vacation dates"
-                      value={rawVacationDatesInputValue}
-                      onChange={(e) =>
-                        setRawVacationDatesInputValue(e.target.value)
-                      }
-                      disabled={!selectedYear}
-                    />
-                    <Button
-                      type="button"
-                      onClick={handleAddVacationDate}
-                      disabled={!selectedYear}
-                    >
+          <div className="space-y-4">
+            <FormField
+              control={form.control}
+              name="rawVacationDates"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Vacation Dates</FormLabel>
+                  <div className="flex gap-2">
+                    <FormControl>
+                      <Input
+                        placeholder="e.g. 24.12-31.12"
+                        {...field}
+                        value={rawVacationDatesInputValue}
+                        onChange={(e) =>
+                          setRawVacationDatesInputValue(e.target.value)
+                        }
+                      />
+                    </FormControl>
+                    <Button type="button" onClick={handleAddVacationDate}>
                       Add
                     </Button>
                   </div>
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+                  <FormDescription>
+                    Enter vacation dates in the format DD.MM-DD.MM
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
-          <div className="space-y-2">
-            {vacationDates &&
-              vacationDates.map((range, index) => (
-                <Card key={index}>
-                  <CardContent className="flex items-center justify-between p-2">
-                    <span>{formatDateRange(range)}</span>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => handleRemoveVacationDate(index)}
-                      aria-label={`Remove date ${formatDateRange(range)}`}
-                    >
-                      <X className="h-4 w-4" />
+            {vacationDates && vacationDates.length > 0 && (
+              <Card>
+                <CardContent className="pt-6">
+                  <h3 className="font-semibold mb-2">Added Vacation Dates:</h3>
+                  <ul className="space-y-2">
+                    {vacationDates.map((date, index) => (
+                      <li
+                        key={index}
+                        className="flex justify-between items-center"
+                      >
+                        <span>{formatDateRange(date)}</span>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleRemoveVacationDate(index)}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </li>
+                    ))}
+                  </ul>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+
+          <div className="space-y-4">
+            <FormField
+              control={form.control}
+              name="rawSickDates"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Sick Days</FormLabel>
+                  <div className="flex gap-2">
+                    <FormControl>
+                      <Input
+                        placeholder="e.g. 24.12-31.12"
+                        {...field}
+                        value={rawSickDatesInputValue}
+                        onChange={(e) =>
+                          setRawSickDatesInputValue(e.target.value)
+                        }
+                      />
+                    </FormControl>
+                    <Button type="button" onClick={handleAddSickDate}>
+                      Add
                     </Button>
-                  </CardContent>
-                </Card>
-              ))}
+                  </div>
+                  <FormDescription>
+                    Enter sick days in the format DD.MM-DD.MM
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {sickDates && sickDates.length > 0 && (
+              <Card>
+                <CardContent className="pt-6">
+                  <h3 className="font-semibold mb-2">Added Sick Days:</h3>
+                  <ul className="space-y-2">
+                    {sickDates.map((date, index) => (
+                      <li
+                        key={index}
+                        className="flex justify-between items-center"
+                      >
+                        <span>{formatDateRange(date)}</span>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleRemoveSickDate(index)}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </li>
+                    ))}
+                  </ul>
+                </CardContent>
+              </Card>
+            )}
           </div>
 
           <Button type="submit">Submit</Button>
